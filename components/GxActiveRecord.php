@@ -503,6 +503,27 @@ abstract class GxActiveRecord extends CActiveRecord {
 				$pivotModel = new $pivotClassName();
 				$pivotModel->setAttributes($value);
 				if (!$pivotModel->save($runValidation)) {
+					if ( $pivotModel->hasErrors() ) {
+						$als = $pivotModel->attributeLabels();
+						foreach($als as $x=>&$y) { if ($y=='') $y = $x; }
+						unset($y); //get rid of ref
+
+						$keys=array();
+						foreach( $pivotModelStatic::representingColumn() as $rp) {
+							if ( $rp !== $thisFkName )
+								$keys[] = '('.$als[$rp].':'.$pivotModel->$rp.')';
+						}
+
+						if ( count($keys) == 0 ) //Just in case the representingColumns don't have any Fk's in them
+							$keys = array($thisFkName);
+
+						foreach($pivotModel->getErrors() as $eattr=>$e) {
+							$this->addError($thisFkName, 
+									$pivotModel->getScenario().' '.
+									implode('',$keys).' '.
+									$als[$eattr].': '.implode(',',$e));
+						}
+					}
 					return false;
 				}
 			}
